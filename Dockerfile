@@ -13,6 +13,8 @@ RUN apt-get update \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
+RUN npm install -g jshint less
+
 RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
 
 # Default to UTF-8 file.encoding
