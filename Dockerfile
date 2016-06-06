@@ -2,6 +2,10 @@ FROM nasqueron/php-cli
 
 MAINTAINER Amal Syahreza <amal.syahreza@gmail.com>
 
+##############################
+# Install and configure node #
+##############################
+
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
 
 RUN apt-get update \
@@ -13,9 +17,14 @@ RUN apt-get update \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Jshint and less for build dependencies
 RUN npm install -g jshint less
 
 RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
+
+##########################################
+# This part install and configure java 8 #
+##########################################
 
 # Default to UTF-8 file.encoding
 ENV LANG C.UTF-8
@@ -49,6 +58,10 @@ RUN set -x \
 
 # see CA_CERTIFICATES_JAVA_VERSION notes above
 RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
+
+##############################################
+#End of Java 8 installation and configuration#
+##############################################
 
 RUN apt-get update && apt-get install -y \
     mercurial subversion openssh-client locales \
