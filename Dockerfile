@@ -134,6 +134,10 @@ ENV PATH /usr/lib/postgresql/$PG_MAJOR/bin:$PATH
 ENV PGDATA /var/lib/postgresql/data
 VOLUME /var/lib/postgresql/data
 
+COPY pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
+
+RUN service postgresql restart  
+
 ENV HOME /home/jenkins
 
 RUN useradd -c "Jenkins user" -d $HOME -m jenkins
