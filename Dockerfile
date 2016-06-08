@@ -2,9 +2,7 @@ FROM nasqueron/php-cli
 
 MAINTAINER Amal Syahreza <amal.syahreza@gmail.com>
 
-##############################
-# Install and configure node #
-##############################
+# Install and configure nodeJs #
 
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
     apt-get update && \
@@ -14,13 +12,11 @@ RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
     bzip2 \
     unzip \
     xz-utils && \
-    # rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
     # Install Jshint and less for build dependencies
     npm install -g jshint less
 
-##########################################
 # This part install and configure java 8 #
-##########################################
 RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list && \
     echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 
@@ -50,18 +46,20 @@ RUN set -x && \
     apt-get install -y \
     openjdk-8-jdk="$JAVA_DEBIAN_VERSION" \
     ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" && \
-    # rm -rf /var/lib/apt/lists/* && \
+    rm -rf /var/lib/apt/lists/* && \
     [ "$JAVA_HOME" = "$(docker-java-home)" ]
 
 # see CA_CERTIFICATES_JAVA_VERSION notes above
 RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
-###################
 # Config Arcanist #
-###################
 
-RUN apt-get update && apt-get install -y \
-    mercurial subversion openssh-client locales \
+RUN apt-get update && \ 
+    apt-get install -y \
+    mercurial \
+    subversion \
+    openssh-client \
+    locales \
     --no-install-recommends && \
     #rm -r /var/lib/apt/lists/* && \
     sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
@@ -79,58 +77,6 @@ RUN cd $HOME && \
     ln -s /opt/config/gitconfig /root/.gitconfig && \
     ln -s /opt/config/arcrc /root/.arcrc
 
-######################
-# Install PostgreSQL #
-######################
-
-RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
-
-ENV PG_MAJOR 9.5
-ENV PG_VERSION 9.5.3-1.pgdg80+1
-
-
-#RUN apt-get update \
-#	&& apt-get install -y postgresql-common \
-#	&& sed -ri 's/#(create_main_cluster) .*$/\1 = false/' /etc/postgresql-common/createcluster.conf \
-#	&& apt-get install -y \
-#		postgresql-$PG_MAJOR=$PG_VERSION \
-#		postgresql-client-$PG_MAJOR=$PG_VERSION \
-#		postgresql-contrib-$PG_MAJOR=$PG_VERSION \
-#	&& rm -rf /var/lib/apt/lists/*
-
-RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list && \
-    apt-get update && apt-get install -y postgresql-common python-software-properties software-properties-common postgresql-9.5 postgresql-client-9.5 postgresql-contrib-9.5
-
-
-# Create a PostgreSQL role named ``docker`` with ``docker`` as the password and
-# then create a database `docker` owned by the ``docker`` role.
-# Note: here we use ``&&\`` to run commands one after the other - the ``\``
-#       allows the RUN command to span multiple lines.
-#    service postgresql restart  && \
-#   psql -command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" && \
-#    createdb -O docker docker
-#USER postgres
-
-#run sleep 10
-
-#RUN /etc/init.d/postgresql start
-
-#COPY pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
-RUN    touch /etc/postgresql/9.5/main/pg_hba.conf && \
-    echo "host all  all    0.0.0.0/0  trust" >> /etc/postgresql/9.5/main/pg_hba.conf && \
-    echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
-    service postgresql restart
-    # su postgres sh createdb -O jenkins jenkins 
-    # su postgres sh psql -command "CREATE USER jenkins  WITH SUPERUSER PASSWORD 'jenkins';" 
-   
-# Adjust PostgreSQL configuration so that remote connections to the
-# database are possible.
-# And add ``listen_addresses`` to ``/etc/postgresql/9.3/main/postgresql.conf``
-
-# Expose the PostgreSQL port
-EXPOSE 5432
-
-#####################
 ENV HOME /home/jenkins
 RUN useradd -c "Jenkins user" -d $HOME -m jenkins
 RUN curl --create-dirs -sSLo /usr/share/jenkins/slave.jar http://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/2.9/remoting-2.9.jar \
@@ -140,6 +86,44 @@ COPY jenkins-slave /usr/local/bin/jenkins-slave
 VOLUME ["/opt/config", "/opt/workspace", "/home/jenkins" ]
 VOLUME /home/jenkins
 WORKDIR /home/jenkins
-RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
-USER jenkins
+
+# Install PostgreSQL #
+
+RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
+ENV PG_MAJOR 9.5
+ENV PG_VERSION 9.5.3-1.pgdg80+1
+
+RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && \
+    apt-get install -y \
+    postgresql-common \
+    python-software-properties \
+    software-properties-common \
+    postgresql-9.5 \
+    postgresql-client-9.5 \
+    postgresql-contrib-9.5 && \
+    rm -rf /var/lib/apt/lists/*
+
+USER root
+
+RUN touch /etc/postgresql/9.5/main/pg_hba.conf && \
+    echo "host all  all    0.0.0.0/0  trust" >> /etc/postgresql/9.5/main/pg_hba.conf && \
+    echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
+    service postgresql restart && \
+    mkdir -p /var/run/postgresql && chown -R postgres /var/run/postgresql
+
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+
+EXPOSE 5432
+
+USER postgres
+
+RUN #psql -c "CREATE ROLE jenkins LOGIN INHERIT;" && \
+    psql -c "CREATE USER jenkins WITH SUPERUSER PASSWORD 'jenkins';" && \
+    createdb -O jenkins jenkins
+
+USER root
+CMD ["service postgresql restart"]
+CMD ["/usr/lib/postgresql/9.5/bin/postgres", "-D", "/var/lib/postgresql/9.5/main", "-c", "config_file=/etc/postgresql/9.5/main/postgresql.conf"]
+
 ENTRYPOINT ["jenkins-slave"]
