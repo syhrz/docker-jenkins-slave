@@ -2,11 +2,12 @@ FROM nasqueron/php-cli
 
 MAINTAINER Amal Syahreza <amal.syahreza@gmail.com>
 
-# Install and configure nodeJs #
+# NodeJs Installation and Configuration  #
 
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
     apt-get update && \
-    apt-get install -y \
+    apt-get install \ 
+    --assume-yes \
     --no-install-recommends \
     nodejs \
     bzip2 \
@@ -14,10 +15,12 @@ RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
     xz-utils && \
     rm -rf /var/lib/apt/lists/* && \
     # Install Jshint and less for build dependencies
-    npm install -g jshint less
-
-# This part install and configure java 8 #
-RUN echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list && \
+    npm install \
+    -g \
+    jshint \
+    less &&\
+    # This part install and configure java 8 #
+    echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list && \
     echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
 
 # Default to UTF-8 file.encoding
@@ -36,7 +39,6 @@ RUN { \
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV JAVA_VERSION 8u91
 ENV JAVA_DEBIAN_VERSION 8u91-b14-1~bpo8+1
-
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
 ENV CA_CERTIFICATES_JAVA_VERSION 20140324
@@ -47,10 +49,9 @@ RUN set -x && \
     openjdk-8-jdk="$JAVA_DEBIAN_VERSION" \
     ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" && \
     rm -rf /var/lib/apt/lists/* && \
-    [ "$JAVA_HOME" = "$(docker-java-home)" ]
-
-# see CA_CERTIFICATES_JAVA_VERSION notes above
-RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
+    [ "$JAVA_HOME" = "$(docker-java-home)" ] && \
+    # see CA_CERTIFICATES_JAVA_VERSION notes above
+    /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
 # Config Arcanist #
 
@@ -78,10 +79,13 @@ RUN cd $HOME && \
     ln -s /opt/config/arcrc /root/.arcrc
 
 ENV HOME /home/jenkins
+
 RUN useradd -c "Jenkins user" -d $HOME -m jenkins
-RUN curl --create-dirs -sSLo /usr/share/jenkins/slave.jar http://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/2.9/remoting-2.9.jar \
-  && chmod 755 /usr/share/jenkins \
-  && chmod 644 /usr/share/jenkins/slave.jar
+RUN curl --create-dirs -sSLo /usr/share/jenkins/slave.jar \
+    http://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/2.9/remoting-2.9.jar \
+    chmod 755 /usr/share/jenkins && \
+    chmod 644 /usr/share/jenkins/slave.jar
+
 COPY jenkins-slave /usr/local/bin/jenkins-slave
 VOLUME ["/opt/config", "/opt/workspace", "/home/jenkins" ]
 VOLUME /home/jenkins
@@ -89,11 +93,11 @@ WORKDIR /home/jenkins
 
 # Install PostgreSQL #
 
-RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
 ENV PG_MAJOR 9.5
 ENV PG_VERSION 9.5.3-1.pgdg80+1
 
-RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list && \
+RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 && \
+    echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list && \
     apt-get update && \
     apt-get install -y \
     postgresql-common \
@@ -118,11 +122,13 @@ EXPOSE 5432
 
 USER postgres
 
-RUN #psql -c "CREATE ROLE jenkins LOGIN INHERIT;" && \
+RUN psql -c "CREATE ROLE root LOGIN INHERIT;" && \
     psql -c "CREATE USER jenkins WITH SUPERUSER PASSWORD 'jenkins';" && \
-    createdb -O jenkins jenkins
+    createdb -O jenkins jenkins && \
+    createdb -O rooot root
 
 USER root
+
 CMD ["service postgresql restart"]
 CMD ["/usr/lib/postgresql/9.5/bin/postgres", "-D", "/var/lib/postgresql/9.5/main", "-c", "config_file=/etc/postgresql/9.5/main/postgresql.conf"]
 
