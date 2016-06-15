@@ -82,7 +82,7 @@ ENV HOME /home/jenkins
 
 RUN useradd -c "Jenkins user" -d $HOME -m jenkins
 RUN curl --create-dirs -sSLo /usr/share/jenkins/slave.jar \
-    http://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/2.9/remoting-2.9.jar \
+    http://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/2.9/remoting-2.9.jar && \
     chmod 755 /usr/share/jenkins && \
     chmod 644 /usr/share/jenkins/slave.jar
 
@@ -122,14 +122,14 @@ EXPOSE 5432
 
 USER postgres
 
-RUN psql -c "CREATE ROLE root LOGIN INHERIT;" && \
+RUN service postgresql start && \
+    psql -c "CREATE ROLE root LOGIN INHERIT;" && \
     psql -c "CREATE USER jenkins WITH SUPERUSER PASSWORD 'jenkins';" && \
     createdb -O jenkins jenkins && \
-    createdb -O rooot root
+    createdb -O root root && \
+    service postgresql stop
 
 USER root
 
-CMD ["service postgresql restart"]
 CMD ["/usr/lib/postgresql/9.5/bin/postgres", "-D", "/var/lib/postgresql/9.5/main", "-c", "config_file=/etc/postgresql/9.5/main/postgresql.conf"]
-
 ENTRYPOINT ["jenkins-slave"]
