@@ -4,6 +4,9 @@ FROM nasqueron/php-cli
 
 MAINTAINER Amal Syahreza <amal.syahreza@gmail.com>
 
+ENV PG_MAJOR 9.5
+ENV PG_VERSION 9.5.3-1.pgdg80+1
+
 # Install and configure NodeJs  #
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
       echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list && \
@@ -89,8 +92,6 @@ WORKDIR /home/jenkins
 
 # Install PostgreSQL #
 
-ENV PG_MAJOR 9.5
-ENV PG_VERSION 9.5.3-1.pgdg80+1
 
 RUN groupadd -r postgres --gid=999 && \
       useradd -r -g postgres --uid=999 postgres && \
@@ -127,7 +128,9 @@ RUN touch /etc/postgresql/9.5/main/pg_hba.conf && \
       echo "host all  all    0.0.0.0/0  trust" >> /etc/postgresql/9.5/main/pg_hba.conf && \
       echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
       service postgresql restart && \
-      mkdir -p /var/run/postgresql && chown -R postgres /var/run/postgresql
+      mkdir -p /var/run/postgresql && \
+      chown -R postgres /var/run/postgresql
+
 VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 EXPOSE 5432
@@ -136,6 +139,7 @@ USER postgres
 
 RUN service postgresql start && \
       psql -U postgres -c "CREATE ROLE root LOGIN INHERIT;" && \
+      psql -U postgres -c "CREATE ROLE jenkins LOGIN INHERIT;" && \
       psql -U postgres -c "CREATE EXTENSION pgtap;" && \
       #createdb -O jenkins jenkins && \
       #createdb -O root root && \
@@ -146,9 +150,8 @@ RUN service postgresql start && \
 #      psql -c "CREATE DATABASE $1 OWNER migration;" && \
 #      psql -U migration -d $1 -h localhost -c "CREATE EXTENSION pgtap;"
 
+USER root
 
 CMD ["/usr/lib/postgresql/9.5/bin/postgres", "-D", "/var/lib/postgresql/9.5/main", "-c", "config_file=/etc/postgresql/9.5/main/postgresql.conf"]
-
-user jenkins
 
 ENTRYPOINT ["jenkins-slave"]
