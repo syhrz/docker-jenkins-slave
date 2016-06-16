@@ -6,6 +6,8 @@ MAINTAINER Amal Syahreza <amal.syahreza@gmail.com>
 
 # Install and configure NodeJs  #
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
+      echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list && \
+      echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list && \
       apt-get update && \
       apt-get install \
       --assume-yes \
@@ -19,10 +21,7 @@ RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
       npm install \
       -g \
       jshint \
-      less &&\
-      # This part install and configure java 8 #
-      echo 'deb http://httpredir.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list && \
-      echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
+      less
 
 # Default to UTF-8 file.encoding
 ENV LANG C.UTF-8
@@ -93,7 +92,8 @@ WORKDIR /home/jenkins
 ENV PG_MAJOR 9.5
 ENV PG_VERSION 9.5.3-1.pgdg80+1
 
-RUN groupadd -r postgres --gid=999 && useradd -r -g postgres --uid=999 postgres && \
+RUN groupadd -r postgres --gid=999 && \
+      useradd -r -g postgres --uid=999 postgres && \
       apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 && \
       echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list && \
       apt-get update && \
@@ -128,7 +128,6 @@ RUN touch /etc/postgresql/9.5/main/pg_hba.conf && \
       echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
       service postgresql restart && \
       mkdir -p /var/run/postgresql && chown -R postgres /var/run/postgresql
-
 VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
 EXPOSE 5432
@@ -136,12 +135,20 @@ EXPOSE 5432
 USER postgres
 
 RUN service postgresql start && \
-      psql -c "CREATE ROLE root LOGIN INHERIT;" && \
-      psql -c "CREATE USER jenkins WITH SUPERUSER PASSWORD 'jenkins';" && \
-      psql -c "CREATE EXTENSION pgtap;" && \
-      createdb -O jenkins jenkins && \
-      createdb -O root root && \
+      psql -U postgres -c "CREATE ROLE root LOGIN INHERIT;" && \
+      psql -U postgres -c "CREATE EXTENSION pgtap;" && \
+      #createdb -O jenkins jenkins && \
+      #createdb -O root root && \
       service postgresql stop
 
+#RUN  service postgresql start && \
+#      psql -c "CREATE USER migration LOGIN NOCREATEDB NOCREATEROLE NOINHERIT NOSUPERUSER;" >/dev/null 2>/dev/null && \
+#      psql -c "CREATE DATABASE $1 OWNER migration;" && \
+#      psql -U migration -d $1 -h localhost -c "CREATE EXTENSION pgtap;"
+
+
 CMD ["/usr/lib/postgresql/9.5/bin/postgres", "-D", "/var/lib/postgresql/9.5/main", "-c", "config_file=/etc/postgresql/9.5/main/postgresql.conf"]
+
+user jenkins
+
 ENTRYPOINT ["jenkins-slave"]
