@@ -1,9 +1,10 @@
+# vim:set ft=dockerfile:
+
 FROM nasqueron/php-cli
 
 MAINTAINER Amal Syahreza <amal.syahreza@gmail.com>
 
-# NodeJs Installation and Configuration  #
-
+# Install and configure NodeJs  #
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
       apt-get update && \
       apt-get install \
@@ -53,8 +54,7 @@ RUN set -x && \
       # see CA_CERTIFICATES_JAVA_VERSION notes above
       /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
-# Config Arcanist #
-
+# Install and configure Arcanist #
 RUN apt-get update && \
       apt-get install -y \
       mercurial \
@@ -66,22 +66,19 @@ RUN apt-get update && \
       sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
       echo 'LANG="en_US.UTF-8"' > /etc/default/locale && \
       dpkg-reconfigure --frontend=noninteractive locales && \
-      update-locale LANG=en_US.UTF-8
-
-RUN cd /opt && \
+      update-locale LANG=en_US.UTF-8 && \
+      cd /opt && \
       git clone https://github.com/phacility/libphutil.git && \
       git clone https://github.com/phacility/arcanist.git && \
-      wget https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
-
-RUN cd $HOME && \
+      wget https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash && \
+      cd $HOME && \
       ln -s /opt/arcanist/bin/arc /usr/local/bin/arc && \
       ln -s /opt/config/gitconfig /root/.gitconfig && \
       ln -s /opt/config/arcrc /root/.arcrc
 
 ENV HOME /home/jenkins
-
-RUN useradd -c "Jenkins user" -d $HOME -m jenkins
-RUN curl --create-dirs -sSLo /usr/share/jenkins/slave.jar \
+RUN useradd -c "Jenkins user" -d $HOME -m jenkins && \
+      curl --create-dirs -sSLo /usr/share/jenkins/slave.jar \
       http://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/2.9/remoting-2.9.jar && \
       chmod 755 /usr/share/jenkins && \
       chmod 644 /usr/share/jenkins/slave.jar
