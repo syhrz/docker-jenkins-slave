@@ -18,6 +18,7 @@ RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
       nodejs \
       bzip2 \
       unzip \
+      sudo \
       xz-utils && \
       rm -rf /var/lib/apt/lists/* && \
       # Install Jshint and less for build dependencies
@@ -112,6 +113,7 @@ RUN groupadd -r postgres --gid=999 && \
       postgresql \
       libdbd-pg-perl \
       libpq-dev \
+      sqitch \
       postgresql-server-dev-all && \
       cpanm --quiet --notest App::Sqitch && \
       cpan TAP::Parser::SourceHandler::pgTAP && \
@@ -120,16 +122,16 @@ RUN groupadd -r postgres --gid=999 && \
       cd pgtap-0.96.0 && \
       make && \
       make install && \
+      rm -f /etc/postgresql/9.5/main/pg_hba.conf && \
       rm -rf /var/lib/apt/lists/*
 
 USER root
 
-RUN touch /etc/postgresql/9.5/main/pg_hba.conf && \
-      echo "host all  all    0.0.0.0/0  trust" >> /etc/postgresql/9.5/main/pg_hba.conf && \
-      echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
-      service postgresql restart && \
-      mkdir -p /var/run/postgresql && \
-      chown -R postgres /var/run/postgresql
+COPY pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
+RUN  echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf && \
+       service postgresql restart && \
+       mkdir -p /var/run/postgresql && \
+       chown -R postgres /var/run/postgresql
 
 VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
