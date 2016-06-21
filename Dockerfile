@@ -114,9 +114,13 @@ RUN groupadd -r postgres --gid=999 && \
       libdbd-pg-perl \
       libpq-dev \
       sqitch \
+      python-pip \
       postgresql-server-dev-all && \
       cpanm --quiet --notest App::Sqitch && \
       cpan TAP::Parser::SourceHandler::pgTAP && \
+      pip install pytest && \
+      pip install boto && \
+      pip install python-dateutil --upgrade && \
       wget http://api.pgxn.org/dist/pgtap/0.96.0/pgtap-0.96.0.zip && \
       unzip pgtap-0.96.0.zip && \
       cd pgtap-0.96.0 && \
