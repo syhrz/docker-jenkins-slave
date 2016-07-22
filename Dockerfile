@@ -91,8 +91,23 @@ VOLUME ["/opt/config", "/opt/workspace", "/home/jenkins" ]
 VOLUME /home/jenkins
 WORKDIR /home/jenkins
 
-# Install PostgreSQL #
+# Install Bazel #
 
+#ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+#RUN cd /opt && \
+#    git clone https://github.com/bazelbuild/bazel.git && \
+#    bash bazel/compile.sh && \
+#    ln -s /opt/bazel/output/bazel /usr/local/bin/bazel
+
+RUN echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list && \
+    curl https://storage.googleapis.com/bazel-apt/doc/apt-key.pub.gpg | sudo apt-key add - && \
+    sudo apt-get update --fix-missing && \
+    sudo apt-get install bazel -y && \
+    bazel && \
+    #sudo apt-get upgrade bazel --force-yes --fix-missing && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install PostgreSQL #
 
 RUN groupadd -r postgres --gid=999 && \
       useradd -r -g postgres --uid=999 postgres && \
@@ -118,6 +133,7 @@ RUN groupadd -r postgres --gid=999 && \
       postgresql-server-dev-all && \
       cpanm --quiet --notest App::Sqitch && \
       cpan TAP::Parser::SourceHandler::pgTAP && \
+      pip install awscli && \
       pip install pytest && \
       pip install boto && \
       pip install python-dateutil --upgrade && \
